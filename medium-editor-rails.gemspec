@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'medium/editor/rails/version'
+require 'medium-editor-rails/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "medium-editor-rails"
-  spec.version       = Medium::Editor::Rails::VERSION
+  spec.version       = MediumEditorRails::Rails::VERSION
   spec.authors       = ["Ahmet Sezgin Duran"]
   spec.email         = ["marjinalist1@gmail.com"]
   spec.summary       = %q{TODO: Write a short summary. Required.}
