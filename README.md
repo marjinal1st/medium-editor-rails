@@ -1,24 +1,58 @@
-# Medium::Editor::Rails
+# Medium Editor for Rails
 
-TODO: Write a gem description
+This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
+
+## Version
+
+The latest version of Medium Editor bundled by this gem is [1.5.3](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Include **medium-editor-rails** in your Rails project's Gemfile:
 
-    gem 'medium-editor-rails'
+```ruby
+gem 'medium-editor-rails'
+```
 
 And then execute:
 
-    $ bundle
+```bash
+$ bundle install
+```
 
-Or install it yourself as:
+## Configuration
 
-    $ gem install medium-editor-rails
+Include javascript file in **app/assets/javascripts/application.js**:
 
-## Usage
+```javascript
+//= require medium-edior
+```
 
-TODO: Write usage instructions here
+Include stylesheet file on **app/assets/stylesheets/application.css**:
+
+```scss
+*= require medium-editor
+```
+
+You can also include themes from **themes** folder, example:
+
+```scss
+*= require medium-editor/themes/flat
+```
+
+## Using Medium Editor with Rails
+
+You need to initialize Medium Editor with any selector of div, example:
+
+```html
+<div class="editable"></div>
+
+<script>var editor = new MediumEditor('.editable');</script>
+```
+
+For extra options, visit this page:
+
+https://github.com/daviferreira/medium-editor#initialization-options
 
 ## Contributing
 

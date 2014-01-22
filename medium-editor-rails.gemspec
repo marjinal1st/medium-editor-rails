@@ -3,21 +3,23 @@ lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'medium-editor-rails/version'
 
-Gem::Specification.new do |spec|
-  spec.name          = "medium-editor-rails"
-  spec.version       = MediumEditorRails::Rails::VERSION
-  spec.authors       = ["Ahmet Sezgin Duran"]
-  spec.email         = ["marjinalist1@gmail.com"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ""
-  spec.license       = "MIT"
+Gem::Specification.new do |s|
+  s.name          = 'medium-editor-rails'
+  s.version       = MediumEditorRails::Rails::VERSION
+  s.authors       = ['Ahmet Sezgin Duran']
+  s.email         = ['marjinalist1@gmail.com']
+  s.summary       = %q{Medium Editor integrated in Rails asset pipeline}
+  s.description   = s.summary
+  s.homepage      = 'https://github.com/marjinal1st/medium-editor-rails'
+  s.license       = 'MIT'
 
-  spec.files         = `git ls-files`.split($/)
-  spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
-  spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
-  spec.require_paths = ["lib"]
+  s.files         = `git ls-files`.split($/)
+  s.executables   = s.files.grep(%r{^bin/}) { |f| File.basename(f) }
+  s.test_files    = s.files.grep(%r{^(test|spec|features)/})
+  s.require_paths = ['lib']
 
-  spec.add_development_dependency "bundler", "~> 1.5"
-  spec.add_development_dependency "rake"
+  s.add_dependency 'rails', '> 3.1'
+
+  s.add_development_dependency 'bundler', '~> 1.5'
+  s.add_development_dependency 'rake'
 end
