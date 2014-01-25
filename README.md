@@ -1,5 +1,8 @@
 # Medium Editor for Rails
 
+[![Gem Version](https://badge.fury.io/rb/medium-editor-rails.png)](http://badge.fury.io/rb/medium-editor-rails)
+[![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
+
 This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
 
 ## Version
@@ -25,13 +28,13 @@ $ bundle install
 Include javascript file in **app/assets/javascripts/application.js**:
 
 ```javascript
-//= require medium-edior
+//= require medium-editor
 ```
 
 Include stylesheet file on **app/assets/stylesheets/application.css**:
 
 ```scss
-*= require medium-editor
+*= require medium-editor/medium-editor
 ```
 
 You can also include themes from **themes** folder, example:
