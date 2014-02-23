@@ -7,7 +7,7 @@ This gem integrates [Medium Editor](https://github.com/daviferreira/medium-edito
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [1.5.3](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [1.5.4](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 
@@ -59,7 +59,7 @@ https://github.com/daviferreira/medium-editor#initialization-options
 
 ## Contributing
 
-1. Fork it ( http://github.com/<my-github-username>/medium-editor-rails/fork )
+1. Fork it ( http://github.com/marjinal1st/medium-editor-rails/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
