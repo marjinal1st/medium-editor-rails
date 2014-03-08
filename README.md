@@ -7,7 +7,7 @@ This gem integrates [Medium Editor](https://github.com/daviferreira/medium-edito
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [1.6.0](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [1.6.5](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 

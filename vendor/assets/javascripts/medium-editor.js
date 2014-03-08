@@ -100,8 +100,13 @@ if (typeof module === 'object') {
             forcePlainText: true,
             placeholder: 'Type your text',
             secondHeader: 'h4',
-            targetBlank: false
+            targetBlank: false,
+            anchorPreviewHideDelay: 500
         },
+
+        // http://stackoverflow.com/questions/17907445/how-to-detect-ie11#comment30165888_17907562
+        // by rg89
+        isIE: ((navigator.appName === 'Microsoft Internet Explorer') || ((navigator.appName === 'Netscape') && (new RegExp("Trident/.*rv:([0-9]{1,}[.0-9]{0,})").exec(navigator.userAgent) !== null))),
 
         init: function (elements, options) {
             this.elements = typeof elements === 'string' ? document.querySelectorAll(elements) : elements;
@@ -337,7 +342,14 @@ if (typeof module === 'object') {
             var self = this,
                 timer = '',
                 i;
-            this.checkSelectionWrapper = function () {
+
+            this.checkSelectionWrapper = function (e) {
+
+                // Do not close the toolbar when bluring the editable area and clicking into the anchor form
+                if (e && self.clickingIntoArchorForm(e)) {
+                    return false;
+                }
+
                 clearTimeout(timer);
                 timer = setTimeout(function () {
                     self.checkSelection();
@@ -372,6 +384,14 @@ if (typeof module === 'object') {
                 }
             }
             return this;
+        },
+
+        clickingIntoArchorForm: function(e) {
+            var self = this;
+            if (e.type && e.type.toLowerCase() === 'blur' && e.relatedTarget && e.relatedTarget === self.anchorInput) {
+                return true;
+            }
+            return false;
         },
 
         hasMultiParagraphs: function () {
@@ -472,7 +492,7 @@ if (typeof module === 'object') {
             if (!parentNode.tagName) {
                 parentNode = this.selection.anchorNode.parentNode;
             }
-            while (parentNode.tagName !== undefined && this.parentElements.indexOf(parentNode.tagName) === -1) {
+            while (parentNode.tagName !== undefined && this.parentElements.indexOf(parentNode.tagName.toLowerCase) === -1) {
                 this.activateButton(parentNode.tagName.toLowerCase());
                 parentNode = parentNode.parentNode;
             }
@@ -554,6 +574,16 @@ if (typeof module === 'object') {
             }
             if (selectionData.tagName === el) {
                 el = 'p';
+            }
+            // When IE we need to add <> to heading elements and
+            //  blockquote needs to be called as indent
+            // http://stackoverflow.com/questions/10741831/execcommand-formatblock-headings-in-ie
+            // http://stackoverflow.com/questions/1816223/rich-text-editor-with-blockquote-function/1821777#1821777
+            if (this.isIE) {
+                if (el === 'blockquote') {
+                    return document.execCommand('indent', false, el);
+                }
+                el = '<' + el + '>';
             }
             return document.execCommand('formatBlock', false, el);
         },
@@ -657,10 +687,14 @@ if (typeof module === 'object') {
             var self = this,
                 buttonHeight = 40,
                 boundary = anchor_el.getBoundingClientRect(),
-                defaultLeft = (self.options.diffLeft) - (self.anchorPreview.offsetWidth / 2),
                 middleBoundary = (boundary.left + boundary.right) / 2,
-                halfOffsetWidth = self.anchorPreview.offsetWidth / 2,
+                halfOffsetWidth,
+                defaultLeft,
                 timer;
+
+            self.anchorPreview.querySelector('i').innerHTML = anchor_el.href;
+            halfOffsetWidth = self.anchorPreview.offsetWidth / 2;
+            defaultLeft = self.options.diffLeft - halfOffsetWidth;
 
             clearTimeout(timer);
             timer = setTimeout(function() {
@@ -669,7 +703,6 @@ if (typeof module === 'object') {
                 }
             }, 100);
 
-            self.anchorPreview.querySelector('i').innerHTML = anchor_el.href;
             self.observeAnchorPreview(anchor_el);
 
             self.anchorPreview.classList.add('medium-toolbar-arrow-over');
@@ -705,7 +738,7 @@ if (typeof module === 'object') {
                         return true;
                     }
                     var durr = (new Date()).getTime() - lastOver;
-                    if (durr > 500) {
+                    if (durr > self.options.anchorPreviewHideDelay) {
                         // hide the preview 1/2 second after mouse leaves the link
                         self.hideAnchorPreview();
 
@@ -757,7 +790,7 @@ if (typeof module === 'object') {
                 setTimeout(function() {
                     self.showAnchorForm(self.activeAnchor.href);
                     self.keepToolbarAlive = false;
-                }, 100);
+                }, 100 + self.options.delay);
 
             }
 
@@ -765,6 +798,14 @@ if (typeof module === 'object') {
         },
 
         editorAnchorObserver: function(e) {
+            var self = this,
+                overAnchor = true,
+                leaveAnchor = function() {
+                    // mark the anchor as no longer hovered, and stop listening
+                    overAnchor = false;
+                    self.activeAnchor.removeEventListener('mouseout', leaveAnchor);
+                };
+
             if (e.target && e.target.tagName.toLowerCase() === 'a') {
                 // only show when hovering on anchors
                 if (this.toolbar.classList.contains('medium-editor-toolbar-active')) {
@@ -772,7 +813,16 @@ if (typeof module === 'object') {
                     return true;
                 }
                 this.activeAnchor = e.target;
-                this.showAnchorPreview(e.target);
+                this.activeAnchor.addEventListener('mouseout', leaveAnchor);
+                // show the anchor preview according to the configured delay
+                // if the mouse has not left the anchor tag in that time
+                setTimeout(function() {
+                    if (overAnchor) {
+                        self.showAnchorPreview(e.target);
+                    }
+                }, self.options.delay);
+
+
             }
         },
 
@@ -813,7 +863,7 @@ if (typeof module === 'object') {
             this.windowResizeHandler = function () {
                 clearTimeout(timerResize);
                 timerResize = setTimeout(function () {
-                    if (self.toolbar.classList.contains('medium-editor-toolbar-active')) {
+                    if (self.toolbar && self.toolbar.classList.contains('medium-editor-toolbar-active')) {
                         self.setToolbarPosition();
                     }
                 }, 100);
@@ -864,16 +914,18 @@ if (typeof module === 'object') {
         },
 
         bindPaste: function () {
-            if (!this.options.forcePlainText) {
-                return this;
-            }
             var i, self = this;
             this.pasteWrapper = function (e) {
                 var paragraphs,
                     html = '',
                     p;
+
                 this.classList.remove('medium-editor-placeholder');
-                if (e.clipboardData && e.clipboardData.getData) {
+                if (!self.options.forcePlainText) {
+                    return this;
+                }
+
+                if (e.clipboardData && e.clipboardData.getData && !e.defaultPrevented) {
                     e.preventDefault();
                     if (!self.options.disableReturn) {
                         paragraphs = e.clipboardData.getData('text/plain').split(/[\r\n]/g);
