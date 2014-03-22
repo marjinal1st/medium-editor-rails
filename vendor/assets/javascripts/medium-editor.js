@@ -95,6 +95,7 @@ if (typeof module === 'object') {
             diffLeft: 0,
             diffTop: -10,
             disableReturn: false,
+            disableDoubleReturn: false,
             disableToolbar: false,
             firstHeader: 'h3',
             forcePlainText: true,
@@ -120,11 +121,15 @@ if (typeof module === 'object') {
             this.parentElements = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre'];
             this.id = document.querySelectorAll('.medium-editor-toolbar').length + 1;
             this.options = extend(options, this.defaults);
-            return this.initElements()
-                       .bindSelect()
-                       .bindPaste()
-                       .setPlaceholders()
-                       .bindWindowActions();
+            return this.setup();
+        },
+
+        setup: function () {
+            this.initElements()
+                .bindSelect()
+                .bindPaste()
+                .setPlaceholders()
+                .bindWindowActions();
         },
 
         initElements: function () {
@@ -172,12 +177,14 @@ if (typeof module === 'object') {
                         !(self.options.disableReturn || node.getAttribute('data-disable-return'))) {
                     document.execCommand('formatBlock', false, 'p');
                 }
-                if (e.which === 13 && !e.shiftKey) {
+                if (e.which === 13) {
                     node = getSelectionStart();
                     tagName = node.tagName.toLowerCase();
                     if (!(self.options.disableReturn || this.getAttribute('data-disable-return')) &&
                             tagName !== 'li' && !self.isListItemChild(node)) {
-                        document.execCommand('formatBlock', false, 'p');
+                        if (!e.shiftKey) {
+                            document.execCommand('formatBlock', false, 'p');
+                        }
                         if (tagName === 'a') {
                             document.execCommand('unlink', false, null);
                         }
@@ -210,6 +217,11 @@ if (typeof module === 'object') {
                 if (e.which === 13) {
                     if (self.options.disableReturn || this.getAttribute('data-disable-return')) {
                         e.preventDefault();
+                    } else if (self.options.disableDoubleReturn || this.getAttribute('data-disable-double-return')) {
+                        var node = getSelectionStart();
+                        if (node && node.innerText === '\n') {
+                            e.preventDefault();
+                        }
                     }
                 }
             });
@@ -262,7 +274,7 @@ if (typeof module === 'object') {
                     'italic' : '<b><i>I</i></b>',
                     'underline': '<b><u>U</u></b>',
                     'superscript': '<b>x<sup>1</sup></b>',
-                    'subscript': '<b>x<sub>1</sup></b>',
+                    'subscript': '<b>x<sub>1</sub></b>',
                     'anchor': '<b>#</b>',
                     'image': '<b>image</b>',
                     'header1': '<b>H1</b>',
@@ -343,7 +355,7 @@ if (typeof module === 'object') {
             toolbar.id = 'medium-editor-toolbar-' + this.id;
             toolbar.className = 'medium-editor-toolbar';
             toolbar.innerHTML = this.toolbarTemplate();
-            document.getElementsByTagName('body')[0].appendChild(toolbar);
+            document.body.appendChild(toolbar);
             return toolbar;
         },
 
@@ -770,12 +782,15 @@ if (typeof module === 'object') {
         createAnchorPreview: function () {
             var self = this,
                 anchorPreview = document.createElement('div');
+
             anchorPreview.id = 'medium-editor-anchor-preview-' + this.id;
             anchorPreview.className = 'medium-editor-anchor-preview';
             anchorPreview.innerHTML = this.anchorPreviewTemplate();
-            document.getElementsByTagName('body')[0].appendChild(anchorPreview);
+            document.body.appendChild(anchorPreview);
 
-            anchorPreview.addEventListener('click', function() { self.anchorPreviewClickHandler(); });
+            anchorPreview.addEventListener('click', function() {
+                self.anchorPreviewClickHandler();
+            });
 
             return anchorPreview;
         },
@@ -816,6 +831,14 @@ if (typeof module === 'object') {
                 };
 
             if (e.target && e.target.tagName.toLowerCase() === 'a') {
+
+                // Detect empty href attributes
+                // The browser will make href="" or href="#top" 
+                // into absolute urls when accessed as e.targed.href, so check the html
+                if (!/href=["']\S+["']/.test(e.target.outerHTML) || /href=["']#\S+["']/.test(e.target.outerHTML)) {
+                    return true;
+                }
+
                 // only show when hovering on anchors
                 if (this.toolbar.classList.contains('medium-editor-toolbar-active')) {
                     // only show when toolbar is not present
@@ -882,24 +905,14 @@ if (typeof module === 'object') {
         },
 
         activate: function () {
-            var i;
             if (this.isActive) {
                 return;
             }
 
-            if (this.toolbar !== undefined) {
-                this.toolbar.style.display = 'block';
-            }
-
-            this.isActive = true;
-            for (i = 0; i < this.elements.length; i += 1) {
-                this.elements[i].setAttribute('contentEditable', true);
-            }
-
-            this.bindWindowActions()
-                .bindSelect();
+            this.setup();
         },
 
+        // TODO: break method
         deactivate: function () {
             var i;
             if (!this.isActive) {
@@ -908,7 +921,10 @@ if (typeof module === 'object') {
             this.isActive = false;
 
             if (this.toolbar !== undefined) {
-                this.toolbar.style.display = 'none';
+                document.body.removeChild(this.anchorPreview);
+                document.body.removeChild(this.toolbar);
+                delete this.toolbar;
+                delete this.anchorPreview;
             }
 
             document.documentElement.removeEventListener('mouseup', this.checkSelectionWrapper);
@@ -919,7 +935,9 @@ if (typeof module === 'object') {
                 this.elements[i].removeEventListener('blur', this.checkSelectionWrapper);
                 this.elements[i].removeEventListener('paste', this.pasteWrapper);
                 this.elements[i].removeAttribute('contentEditable');
+                this.elements[i].removeAttribute('data-medium-element');
             }
+
         },
 
         bindPaste: function () {
