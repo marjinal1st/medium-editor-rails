@@ -1,5 +1,9 @@
 
 #### [Current]
+ * [f4f2a29](../../commit/f4f2a29) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+
+#### 0.9.0
+ * [26484b3](../../commit/26484b3) - __(Ahmet Sezgin Duran)__ Bump versions 0.9.0 and 1.8.5
  * [e5c7084](../../commit/e5c7084) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
 
 #### 0.8.0
