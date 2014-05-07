@@ -222,6 +222,17 @@ if (typeof module === 'object') {
 
         bindParagraphCreation: function (index) {
             var self = this;
+            this.elements[index].addEventListener('keypress', function (e) {
+                var node = getSelectionStart(),
+                    tagName;
+                if (e.which === 32) {
+                    tagName = node.tagName.toLowerCase();
+                    if (tagName === 'a') {
+                        document.execCommand('unlink', false, null);
+                    }
+                }
+            });
+
             this.elements[index].addEventListener('keyup', function (e) {
                 var node = getSelectionStart(),
                     tagName;
@@ -596,10 +607,7 @@ if (typeof module === 'object') {
 
         checkActiveButtons: function () {
             var elements = Array.prototype.slice.call(this.elements),
-                parentNode = this.selection.anchorNode;
-            if (!parentNode.tagName) {
-                parentNode = this.selection.anchorNode.parentNode;
-            }
+                parentNode = this.getSelectedParentElement();
             while (parentNode.tagName !== undefined && this.parentElements.indexOf(parentNode.tagName.toLowerCase) === -1) {
                 this.activateButton(parentNode.tagName.toLowerCase());
                 this.callExtensions('checkState', parentNode);
@@ -668,8 +676,31 @@ if (typeof module === 'object') {
             }
         },
 
+        // http://stackoverflow.com/questions/15867542/range-object-get-selection-parent-node-chrome-vs-firefox
+        rangeSelectsSingleNode: function (range) {
+            var startNode = range.startContainer;
+            return startNode === range.endContainer &&
+                startNode.hasChildNodes() &&
+                range.endOffset === range.startOffset + 1;
+        },
+
+        getSelectedParentElement: function () {
+            var selectedParentElement = null,
+                range = this.selectionRange;
+            if (this.rangeSelectsSingleNode(range)) {
+                selectedParentElement = range.startContainer.childNodes[range.startOffset];
+            } else if (range.startContainer.nodeType === 3) {
+                selectedParentElement = range.startContainer.parentNode;
+            } else {
+                selectedParentElement = range.startContainer;
+            }
+            return selectedParentElement;
+        },
+
         triggerAnchorAction: function () {
-            if (this.selection.anchorNode.parentNode.tagName.toLowerCase() === 'a') {
+            var selectedParentElement = this.getSelectedParentElement();
+            if (selectedParentElement.tagName &&
+                    selectedParentElement.tagName.toLowerCase() === 'a') {
                 document.execCommand('unlink', false, null);
             } else {
                 if (this.anchorForm.style.display === 'block') {
@@ -1000,6 +1031,7 @@ if (typeof module === 'object') {
             if (this.options.targetBlank) {
                 this.setTargetBlank();
             }
+            this.checkSelection();
             this.showToolbarActions();
             input.value = '';
         },
@@ -1106,7 +1138,8 @@ if (typeof module === 'object') {
         setPlaceholders: function () {
             var i,
                 activatePlaceholder = function (el) {
-                    if (el.textContent.replace(/^\s+|\s+$/g, '') === '') {
+                    if (!(el.querySelector('img')) &&
+                            el.textContent.replace(/^\s+|\s+$/g, '') === '') {
                         el.classList.add('medium-editor-placeholder');
                     }
                 },
