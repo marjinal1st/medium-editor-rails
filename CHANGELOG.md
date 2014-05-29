@@ -1,5 +1,14 @@
 
 #### [Current]
+ * [9abd0e7](../../commit/9abd0e7) - __(Ahmet Sezgin Duran)__ [#2](../../issues/2) Fix dependency problem
+ * [a9fe34d](../../commit/a9fe34d) - __(Ahmet Sezgin Duran)__ Merge tag '0.9.2' into develop
+
+0.9.2
+
+ * [56db2d8](../../commit/56db2d8) - __(Ahmet Sezgin Duran)__ Update Gemfile with dependencies
+
+#### 0.9.2
+ * [7279ec0](../../commit/7279ec0) - __(Ahmet Sezgin Duran)__ Bump versions 0.9.2 and 1.8.8
  * [1338bb4](../../commit/1338bb4) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
 
 #### 0.9.1
