@@ -16,6 +16,6 @@ Gem::Specification.new do |gem|
   gem.files         = `git ls-files`.split($/)
   gem.require_paths = ['lib']
 
-  gem.add_dependency 'railties', '~> 3.0'
+  gem.add_dependency 'railties', '>= 3.0'
   gem.add_development_dependency 'bundler', '~> 1.0'
 end
