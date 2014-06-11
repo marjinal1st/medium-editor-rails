@@ -1,5 +1,12 @@
 
 #### [Current]
+ * [4caf0f0](../../commit/4caf0f0) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+ * [e1c1ee3](../../commit/e1c1ee3) - __(Ahmet Sezgin Duran)__ Merge tag '0.9.3' into develop
+
+0.9.3
+
+#### 0.9.3
+ * [96fb2c5](../../commit/96fb2c5) - __(Ahmet Sezgin Duran)__ [#2](../../issues/2) Bump version 0.9.3
  * [9abd0e7](../../commit/9abd0e7) - __(Ahmet Sezgin Duran)__ [#2](../../issues/2) Fix dependency problem
  * [a9fe34d](../../commit/a9fe34d) - __(Ahmet Sezgin Duran)__ Merge tag '0.9.2' into develop
 
