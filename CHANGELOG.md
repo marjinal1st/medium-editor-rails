@@ -1,5 +1,12 @@
 
 #### [Current]
+ * [028abec](../../commit/028abec) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+ * [9de9ca7](../../commit/9de9ca7) - __(Ahmet Sezgin Duran)__ Merge tag '0.9.4' into develop
+
+0.9.4
+
+#### 0.9.4
+ * [da0a1dc](../../commit/da0a1dc) - __(Ahmet Sezgin Duran)__ Bump versions 0.9.4 and 1.8.14
  * [4caf0f0](../../commit/4caf0f0) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
  * [e1c1ee3](../../commit/e1c1ee3) - __(Ahmet Sezgin Duran)__ Merge tag '0.9.3' into develop
 
