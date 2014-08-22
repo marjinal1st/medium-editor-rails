@@ -2,6 +2,7 @@
 
 [![Gem Version](https://badge.fury.io/rb/medium-editor-rails.png)](http://badge.fury.io/rb/medium-editor-rails)
 [![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
+[![Dependency Status](https://gemnasium.com/marjinal1st/medium-editor-rails.svg)](https://gemnasium.com/marjinal1st/medium-editor-rails)
 
 This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
 
