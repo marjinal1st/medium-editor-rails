@@ -1,5 +1,9 @@
 
 #### [Current]
+ * [3e8148f](../../commit/3e8148f) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+
+#### 0.11.0
+ * [90cef00](../../commit/90cef00) - __(Ahmet Sezgin Duran)__ Bump versions 0.11.0 and 1.9.4
  * [c949af6](../../commit/c949af6) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
  * [6e867bb](../../commit/6e867bb) - __(Ahmet Sezgin Duran)__ Add Gemnasium badge
  * [618bf25](../../commit/618bf25) - __(Ahmet Sezgin Duran)__ Merge tag '0.10.0' into develop
