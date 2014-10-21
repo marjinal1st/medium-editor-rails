@@ -276,14 +276,18 @@ if (typeof module === 'object') {
 
             this.elements[index].addEventListener('keyup', function (e) {
                 var node = getSelectionStart(),
-                    tagName;
+                    tagName,
+                    editorElement;
+                    
                 if (node && node.getAttribute('data-medium-element') && node.children.length === 0 && !(self.options.disableReturn || node.getAttribute('data-disable-return'))) {
                     document.execCommand('formatBlock', false, 'p');
                 }
                 if (e.which === 13) {
                     node = getSelectionStart();
                     tagName = node.tagName.toLowerCase();
-                    if (!(self.options.disableReturn || this.getAttribute('data-disable-return')) &&
+                    editorElement = self.getSelectionElement();
+
+                    if (!(self.options.disableReturn || editorElement.getAttribute('data-disable-return')) &&
                         tagName !== 'li' && !self.isListItemChild(node)) {
                         if (!e.shiftKey) {
                             document.execCommand('formatBlock', false, 'p');
@@ -375,7 +379,11 @@ if (typeof module === 'object') {
                     'unorderedlist': '<button class="medium-editor-action medium-editor-action-unorderedlist" data-action="insertunorderedlist" data-element="ul">' + buttonLabels.unorderedlist + '</button>',
                     'pre': '<button class="medium-editor-action medium-editor-action-pre" data-action="append-pre" data-element="pre">' + buttonLabels.pre + '</button>',
                     'indent': '<button class="medium-editor-action medium-editor-action-indent" data-action="indent" data-element="ul">' + buttonLabels.indent + '</button>',
-                    'outdent': '<button class="medium-editor-action medium-editor-action-outdent" data-action="outdent" data-element="ul">' + buttonLabels.outdent + '</button>'
+                    'outdent': '<button class="medium-editor-action medium-editor-action-outdent" data-action="outdent" data-element="ul">' + buttonLabels.outdent + '</button>',
+                    'justifyCenter': '<button class="medium-editor-action medium-editor-action-justifyCenter" data-action="justifyCenter" data-element="">' + buttonLabels.justifyCenter + '</button>',
+                    'justifyFull': '<button class="medium-editor-action medium-editor-action-justifyFull" data-action="justifyFull" data-element="">' + buttonLabels.justifyFull + '</button>',
+                    'justifyLeft': '<button class="medium-editor-action medium-editor-action-justifyLeft" data-action="justifyLeft" data-element="">' + buttonLabels.justifyLeft + '</button>',
+                    'justifyRight': '<button class="medium-editor-action medium-editor-action-justifyRight" data-action="justifyRight" data-element="">' + buttonLabels.justifyRight + '</button>'
                 };
             return buttonTemplates[btnType] || false;
         },
@@ -399,7 +407,11 @@ if (typeof module === 'object') {
                     'unorderedlist': '<b>&bull;</b>',
                     'pre': '<b>0101</b>',
                     'indent': '<b>&rarr;</b>',
-                    'outdent': '<b>&larr;</b>'
+                    'outdent': '<b>&larr;</b>',
+                    'justifyCenter': '<b>C</b>',
+                    'justifyFull': '<b>J</b>',
+                    'justifyLeft': '<b>L</b>',
+                    'justifyRight': '<b>R</b>'
                 };
             if (buttonLabelType === 'fontawesome') {
                 customButtonLabels = {
@@ -415,7 +427,11 @@ if (typeof module === 'object') {
                     'unorderedlist': '<i class="fa fa-list-ul"></i>',
                     'pre': '<i class="fa fa-code fa-lg"></i>',
                     'indent': '<i class="fa fa-indent"></i>',
-                    'outdent': '<i class="fa fa-outdent"></i>'
+                    'outdent': '<i class="fa fa-outdent"></i>',
+                    'justifyCenter': '<i class="fa fa-align-center"></i>',
+                    'justifyFull': '<i class="fa fa-align-justify"></i>',
+                    'justifyLeft': '<i class="fa fa-align-left"></i>',
+                    'justifyRight': '<i class="fa fa-align-right"></i>'
                 };
             } else if (typeof buttonLabelType === 'object') {
                 customButtonLabels = buttonLabelType;
@@ -625,36 +641,31 @@ if (typeof module === 'object') {
         },
 
         findMatchingSelectionParent: function(testElementFunction) {
-            var selection = window.getSelection(),
-                range, current, parent,
-                result,
-                getElement = function (e) {
-                    var localParent = e;
-                    try {
-                        while (!testElementFunction(localParent)) {
-                            localParent = localParent.parentNode;
-                        }
-                    } catch (errb) {
-                        return false;
-                    }
-                    return localParent;
-                };
-            // First try on current node
-            try {
-                range = selection.getRangeAt(0);
-                current = range.commonAncestorContainer;
-                parent = current.parentNode;
+            var selection = window.getSelection(), range, current;
 
-                if (testElementFunction(current)) {
-                    result = current;
-                } else {
-                    result = getElement(parent);
-                }
-                // If not search in the parent nodes.
-            } catch (err) {
-                result = getElement(parent);
+            if (selection.rangeCount === 0) {
+                return false;
             }
-            return result;
+
+            range = selection.getRangeAt(0);
+            current = range.commonAncestorContainer;
+
+            do {
+              if (current.nodeType === 1){
+                if ( testElementFunction(current) )
+                {
+                    return current;
+                }
+                // do not traverse upwards past the nearest containing editor
+                if (current.getAttribute('data-medium-element')) {
+                    return false;
+                }
+              }
+
+              current = current.parentNode;
+            } while (current);
+
+            return false;
         },
 
         getSelectionElement: function () {
@@ -1325,7 +1336,8 @@ if (typeof module === 'object') {
                         }
                         document.execCommand('insertHTML', false, html);
                     } else {
-                        document.execCommand('insertHTML', false, e.clipboardData.getData('text/plain'));
+                        html = self.htmlEntities(e.clipboardData.getData('text/plain'));
+                        document.execCommand('insertHTML', false, html);
                     }
                 }
             };
