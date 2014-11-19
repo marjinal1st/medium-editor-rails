@@ -1,5 +1,9 @@
 
 #### [Current]
+ * [fdb732b](../../commit/fdb732b) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+
+#### 0.12.0
+ * [ca8041a](../../commit/ca8041a) - __(Ahmet Sezgin Duran)__ Bump versions 0.12.0 and 1.9.8
  * [3e8148f](../../commit/3e8148f) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
 
 #### 0.11.0
