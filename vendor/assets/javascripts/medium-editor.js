@@ -108,6 +108,39 @@ else if (typeof define === 'function' && define.amd) {
         return !!(obj && obj.nodeType === 1);
     }
 
+    // http://stackoverflow.com/questions/6690752/insert-html-at-caret-in-a-contenteditable-div
+    function insertHTMLCommand(doc, html) {
+        var selection, range, el, fragment, node, lastNode;
+
+        if (doc.queryCommandSupported('insertHTML')) {
+            return doc.execCommand('insertHTML', false, html);
+        }
+
+        selection = window.getSelection();
+        if (selection.getRangeAt && selection.rangeCount) {
+            range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            el = doc.createElement("div");
+            el.innerHTML = html;
+            fragment = doc.createDocumentFragment();
+            while (el.firstChild) {
+                node = el.firstChild;
+                lastNode = fragment.appendChild(node);
+            }
+            range.insertNode(fragment);
+
+            // Preserve the selection:
+            if (lastNode) {
+                range = range.cloneRange();
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+    }
+
     MediumEditor.prototype = {
         defaults: {
             allowMultiParagraphSelection: true,
@@ -124,6 +157,8 @@ else if (typeof define === 'function' && define.amd) {
             disableDoubleReturn: false,
             disableToolbar: false,
             disableEditing: false,
+            disableAnchorForm: false,
+            disablePlaceholders: false,
             elementsContainer: false,
             contentWindow: window,
             ownerDocument: document,
@@ -146,6 +181,8 @@ else if (typeof define === 'function' && define.amd) {
         isIE: ((navigator.appName === 'Microsoft Internet Explorer') || ((navigator.appName === 'Netscape') && (new RegExp('Trident/.*rv:([0-9]{1,}[.0-9]{0,})').exec(navigator.userAgent) !== null))),
 
         init: function (elements, options) {
+            var uniqueId = 1;
+
             this.options = extend(options, this.defaults);
             this.setElementSelection(elements);
             if (this.elements.length === 0) {
@@ -155,7 +192,13 @@ else if (typeof define === 'function' && define.amd) {
             if (!this.options.elementsContainer) {
                 this.options.elementsContainer = document.body;
             }
-            this.id = this.options.elementsContainer.querySelectorAll('.medium-editor-toolbar').length + 1;
+
+            while (this.options.elementsContainer.querySelector('#medium-editor-toolbar-' + uniqueId)) {
+                uniqueId = uniqueId + 1;
+            }
+
+            this.id = uniqueId;
+
             return this.setup();
         },
 
@@ -166,6 +209,7 @@ else if (typeof define === 'function' && define.amd) {
                 .bindSelect()
                 .bindPaste()
                 .setPlaceholders()
+                .bindElementActions()
                 .bindWindowActions()
                 .passInstance();
         },
@@ -204,7 +248,7 @@ else if (typeof define === 'function' && define.amd) {
                     this.elements[i].setAttribute('data-placeholder', this.options.placeholder);
                 }
                 this.elements[i].setAttribute('data-medium-element', true);
-                this.bindParagraphCreation(i).bindReturn(i).bindTab(i);
+                this.bindParagraphCreation(i);
                 if (!this.options.disableToolbar && !this.elements[i].getAttribute('data-disable-toolbar')) {
                     addToolbar = true;
                 }
@@ -228,6 +272,114 @@ else if (typeof define === 'function' && define.amd) {
             this.elements = typeof this.elementSelection === 'string' ? this.options.ownerDocument.querySelectorAll(this.elementSelection) : this.elementSelection;
             if (this.elements.nodeType === 1) {
                 this.elements = [this.elements];
+            }
+        },
+
+        bindBlur: function(i) {
+            var self = this,
+                timeout,
+                blurFunction = function(e){
+                    // If it's not part of the editor, or the toolbar
+                    if ( e.target !== self.toolbar
+                        && e.target !== self.elements[0]
+                        && !isDescendant(self.elements[0], e.target)
+                        && !isDescendant(self.toolbar, e.target)
+                        && !isDescendant(self.anchorPreview, e.target)) {
+
+                        // Activate the placeholder
+                        if (!self.options.disablePlaceholders) {
+                            self.placeholderWrapper(self.elements[0], e);
+                        }
+
+                        clearTimeout(timeout);
+                        // Hide the toolbar after a small delay so we can prevent this on toolbar click
+                        timeout = setTimeout(function(){
+                            if ( !self.keepToolbarAlive ) {
+                                self.hideToolbarActions();
+                            }
+                        }, 200);
+                    }
+                };
+
+            // Hide the toolbar when focusing outside of the editor.
+            this.on(document.body, 'click', blurFunction, true);
+            this.on(document.body, 'focus', blurFunction, true);
+
+            return this;
+        },
+
+        bindKeypress: function(i) {
+            if (this.options.disablePlaceholders) {
+                return this;
+            }
+
+            var self = this;
+
+            // Set up the keypress events
+            this.on(this.elements[i], 'keypress', function(event){
+                self.placeholderWrapper(this,event);
+            });
+
+            return this;
+        },
+
+        bindClick: function(i) {
+            var self = this;
+
+            this.on(this.elements[i], 'click', function(){
+                if (!self.options.disablePlaceholders) {
+                    // Remove placeholder
+                    this.classList.remove('medium-editor-placeholder');
+                }
+
+                if ( self.options.staticToolbar ) {
+                    self.setToolbarPosition();
+                }
+            });
+
+            return this;
+        },
+
+        /**
+         * This handles blur and keypress events on elements
+         * Including Placeholders, and tooldbar hiding on blur
+         */
+        bindElementActions: function() {
+            var i;
+
+            for (i = 0; i < this.elements.length; i += 1) {
+
+                if (!this.options.disablePlaceholders) {
+                    // Active all of the placeholders
+                    this.activatePlaceholder(this.elements[i]);
+                }
+
+                // Bind the return and tab keypress events
+                this.bindReturn(i)
+                    .bindTab(i)
+                    .bindBlur(i)
+                    .bindClick(i)
+                    .bindKeypress(i);
+
+            }
+
+            return this;
+        },
+
+        // Two functions to handle placeholders
+        activatePlaceholder:  function (el) {
+
+            if (!(el.querySelector('img')) &&
+                    !(el.querySelector('blockquote')) &&
+                    el.textContent.replace(/^\s+|\s+$/g, '') === '') {
+
+                el.classList.add('medium-editor-placeholder');
+            }
+        },
+        placeholderWrapper: function (el, e) {
+            el.classList.remove('medium-editor-placeholder');
+            if (e.type !== 'keypress') {
+                this.activatePlaceholder(el);
             }
         },
 
@@ -296,9 +448,10 @@ else if (typeof define === 'function' && define.amd) {
         bindParagraphCreation: function (index) {
             var self = this;
             this.on(this.elements[index], 'keypress', function (e) {
-                var node = getSelectionStart.call(self),
+                var node,
                     tagName;
                 if (e.which === 32) {
+                    node = getSelectionStart.call(self);
                     tagName = node.tagName.toLowerCase();
                     if (tagName === 'a') {
                         document.execCommand('unlink', false, null);
@@ -358,7 +511,7 @@ else if (typeof define === 'function' && define.amd) {
                         e.preventDefault();
                     } else if (self.options.disableDoubleReturn || this.getAttribute('data-disable-double-return')) {
                         var node = getSelectionStart.call(self);
-                        if (node && node.innerText === '\n') {
+                        if (node && node.textContent === '\n') {
                             e.preventDefault();
                         }
                     }
@@ -487,13 +640,15 @@ else if (typeof define === 'function' && define.amd) {
             }
             this.toolbar = this.createToolbar();
             this.keepToolbarAlive = false;
-            this.anchorForm = this.toolbar.querySelector('.medium-editor-toolbar-form-anchor');
-            this.anchorInput = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-input');
-            this.anchorTarget = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-target');
-            this.anchorButton = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-button');
             this.toolbarActions = this.toolbar.querySelector('.medium-editor-toolbar-actions');
             this.anchorPreview = this.createAnchorPreview();
 
+            if (!this.options.disableAnchorForm) {
+                this.anchorForm = this.toolbar.querySelector('.medium-editor-toolbar-form-anchor');
+                this.anchorInput = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-input');
+                this.anchorTarget = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-target');
+                this.anchorButton = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-button');   
+            }
             return this;
         },
 
@@ -501,8 +656,17 @@ else if (typeof define === 'function' && define.amd) {
             var toolbar = document.createElement('div');
             toolbar.id = 'medium-editor-toolbar-' + this.id;
             toolbar.className = 'medium-editor-toolbar';
+
+            if ( this.options.staticToolbar ) {
+                toolbar.className += " static-toolbar";
+            } else {
+                toolbar.className += " stalker-toolbar";
+            }
+
             toolbar.appendChild(this.toolbarButtons());
-            toolbar.appendChild(this.toolbarFormAnchor());
+            if (!this.options.disableAnchorForm) {
+                toolbar.appendChild(this.toolbarFormAnchor());
+            }
             this.options.elementsContainer.appendChild(toolbar);
             return toolbar;
         },
@@ -516,7 +680,7 @@ else if (typeof define === 'function' && define.amd) {
                 btn,
                 ext;
 
-            ul.id = 'medium-editor-toolbar-actions';
+            ul.id = 'medium-editor-toolbar-actions' + this.id;
             ul.className = 'medium-editor-toolbar-actions clearfix';
 
             for (i = 0; i < btns.length; i += 1) {
@@ -576,7 +740,7 @@ else if (typeof define === 'function' && define.amd) {
 
 
             anchor.className = 'medium-editor-toolbar-form-anchor';
-            anchor.id = 'medium-editor-toolbar-form-anchor';
+            anchor.id = 'medium-editor-toolbar-form-anchor-' + this.id;
             anchor.appendChild(input);
 
             anchor.appendChild(save);
@@ -601,7 +765,7 @@ else if (typeof define === 'function' && define.amd) {
             this.checkSelectionWrapper = function (e) {
 
                 // Do not close the toolbar when bluring the editable area and clicking into the anchor form
-                if (e && self.clickingIntoArchorForm(e)) {
+                if (!self.options.disableAnchorForm && e && self.clickingIntoArchorForm(e)) {
                     return false;
                 }
 
@@ -616,6 +780,7 @@ else if (typeof define === 'function' && define.amd) {
             for (i = 0; i < this.elements.length; i += 1) {
                 this.on(this.elements[i], 'keyup', this.checkSelectionWrapper);
                 this.on(this.elements[i], 'blur', this.checkSelectionWrapper);
+                this.on(this.elements[i], 'click', this.checkSelectionWrapper);
             }
             return this;
         },
@@ -627,14 +792,23 @@ else if (typeof define === 'function' && define.amd) {
             if (this.keepToolbarAlive !== true && !this.options.disableToolbar) {
 
                 newSelection = this.options.contentWindow.getSelection();
-                if (newSelection.toString().trim() === '' ||
+                if ((!this.options.updateOnEmptySelection && newSelection.toString().trim() === '') ||
                     (this.options.allowMultiParagraphSelection === false && this.hasMultiParagraphs()) ||
                     this.selectionInContentEditableFalse()) {
-                    this.hideToolbarActions();
+
+                    if ( !this.options.staticToolbar ) {
+                        this.hideToolbarActions();
+                    } else if (this.anchorForm && this.anchorForm.style.display === 'block') {
+                        this.setToolbarButtonStates();
+                        this.showToolbarActions();
+                    }
+
                 } else {
                     selectionElement = this.getSelectionElement();
                     if (!selectionElement || selectionElement.getAttribute('data-disable-toolbar')) {
-                        this.hideToolbarActions();
+                        if ( !this.options.staticToolbar ) {
+                            this.hideToolbarActions();
+                        }
                     } else {
                         this.checkSelectionElement(newSelection, selectionElement);
                     }
@@ -672,7 +846,10 @@ else if (typeof define === 'function' && define.amd) {
                     return;
                 }
             }
-            this.hideToolbarActions();
+
+            if ( !this.options.staticToolbar ) {
+                this.hideToolbarActions();
+            }
         },
 
         findMatchingSelectionParent: function(testElementFunction) {
@@ -716,28 +893,71 @@ else if (typeof define === 'function' && define.amd) {
         },
 
         setToolbarPosition: function () {
-            var buttonHeight = 50,
-                selection = this.options.contentWindow.getSelection(),
-                range = selection.getRangeAt(0),
-                boundary = range.getBoundingClientRect(),
-                defaultLeft = (this.options.diffLeft) - (this.toolbar.offsetWidth / 2),
-                middleBoundary = (boundary.left + boundary.right) / 2,
-                halfOffsetWidth = this.toolbar.offsetWidth / 2;
-            if (boundary.top < buttonHeight) {
-                this.toolbar.classList.add('medium-toolbar-arrow-over');
-                this.toolbar.classList.remove('medium-toolbar-arrow-under');
-                this.toolbar.style.top = buttonHeight + boundary.bottom - this.options.diffTop + this.options.contentWindow.pageYOffset - this.toolbar.offsetHeight + 'px';
-            } else {
-                this.toolbar.classList.add('medium-toolbar-arrow-under');
-                this.toolbar.classList.remove('medium-toolbar-arrow-over');
-                this.toolbar.style.top = boundary.top + this.options.diffTop + this.options.contentWindow.pageYOffset - this.toolbar.offsetHeight + 'px';
+            // document.documentElement for IE 9
+            var scrollTop = (document.documentElement && document.documentElement.scrollTop) || document.body.scrollTop,
+            container = this.elements[0],
+            containerRect = container.getBoundingClientRect(),
+            containerTop = containerRect.top + scrollTop,
+            buttonHeight = 50,
+            selection = window.getSelection(),
+            range,
+            boundary,
+            middleBoundary,
+            defaultLeft = (this.options.diffLeft) - (this.toolbar.offsetWidth / 2),
+            halfOffsetWidth = this.toolbar.offsetWidth / 2;
+
+            if ( selection.focusNode === null ) {
+                return this;
             }
-            if (middleBoundary < halfOffsetWidth) {
-                this.toolbar.style.left = defaultLeft + halfOffsetWidth + 'px';
-            } else if ((this.options.contentWindow.innerWidth - middleBoundary) < halfOffsetWidth) {
-                this.toolbar.style.left = this.options.contentWindow.innerWidth + defaultLeft - halfOffsetWidth + 'px';
-            } else {
-                this.toolbar.style.left = defaultLeft + middleBoundary + 'px';
+
+            this.toolbar.classList.add('medium-editor-toolbar-active');
+
+            if ( this.options.staticToolbar ) {
+
+                if ( this.options.stickyToolbar ) {
+
+                    // If it's beyond the height of the editor, position it at the bottom of the editor
+                    if ( scrollTop > (containerTop + this.elements[0].offsetHeight - this.toolbar.offsetHeight)) {
+                        this.toolbar.style.top = (containerTop + this.elements[0].offsetHeight) + 'px';
+                    }
+                    // Stick the toolbar to the top of the window
+                    else if ( scrollTop > (containerTop - this.toolbar.offsetHeight) ) {
+                        this.toolbar.classList.add('sticky-toolbar');
+                        this.toolbar.style.top = "0px";
+                    }
+                    // Normal static toolbar position
+                    else {
+                        this.toolbar.classList.remove('sticky-toolbar');
+                        this.toolbar.style.top = containerTop - this.toolbar.offsetHeight + "px";
+                    }
+
+                } else {
+                    this.toolbar.style.top = containerTop - this.toolbar.offsetHeight + "px";
+                }
+
+                this.toolbar.style.left = containerRect.left + "px";
+
+            } else if (!selection.isCollapsed) {
+                range = selection.getRangeAt(0);
+                boundary = range.getBoundingClientRect();
+                middleBoundary = (boundary.left + boundary.right) / 2;
+
+                if (boundary.top < buttonHeight) {
+                    this.toolbar.classList.add('medium-toolbar-arrow-over');
+                    this.toolbar.classList.remove('medium-toolbar-arrow-under');
+                    this.toolbar.style.top = buttonHeight + boundary.bottom - this.options.diffTop + this.options.contentWindow.pageYOffset - this.toolbar.offsetHeight + 'px';
+                } else {
+                    this.toolbar.classList.add('medium-toolbar-arrow-under');
+                    this.toolbar.classList.remove('medium-toolbar-arrow-over');
+                    this.toolbar.style.top = boundary.top + this.options.diffTop + this.options.contentWindow.pageYOffset - this.toolbar.offsetHeight + 'px';
+                }
+                if (middleBoundary < halfOffsetWidth) {
+                    this.toolbar.style.left = defaultLeft + halfOffsetWidth + 'px';
+                } else if ((this.options.contentWindow.innerWidth - middleBoundary) < halfOffsetWidth) {
+                    this.toolbar.style.left = this.options.contentWindow.innerWidth + defaultLeft - halfOffsetWidth + 'px';
+                } else {
+                    this.toolbar.style.left = defaultLeft + middleBoundary + 'px';
+                }
             }
 
             this.hideAnchorPreview();
@@ -817,7 +1037,9 @@ else if (typeof define === 'function' && define.amd) {
                 this.setToolbarPosition();
                 this.setToolbarButtonStates();
             } else if (action === 'anchor') {
-                this.triggerAnchorAction(e);
+                if (!this.options.disableAnchorForm) {
+                    this.triggerAnchorAction(e);
+                }
             } else if (action === 'image') {
                 this.options.ownerDocument.execCommand('insertImage', false, this.options.contentWindow.getSelection());
             } else {
@@ -852,7 +1074,7 @@ else if (typeof define === 'function' && define.amd) {
             if (selectedParentElement.tagName &&
                     selectedParentElement.tagName.toLowerCase() === 'a') {
                 this.options.ownerDocument.execCommand('unlink', false, null);
-            } else {
+            } else if (this.anchorForm) {
                 if (this.anchorForm.style.display === 'block') {
                     this.showToolbarActions();
                 } else {
@@ -917,15 +1139,20 @@ else if (typeof define === 'function' && define.amd) {
 
         hideToolbarActions: function () {
             this.keepToolbarAlive = false;
-            if (this.toolbar !== undefined) {
+            if (this.toolbar !== undefined && this.toolbar.classList.contains('medium-editor-toolbar-active')) {
                 this.toolbar.classList.remove('medium-editor-toolbar-active');
+                if (this.onHideToolbar) {
+                    this.onHideToolbar();
+                }
             }
         },
 
         showToolbarActions: function () {
             var self = this,
                 timer;
-            this.anchorForm.style.display = 'none';
+            if (this.anchorForm) {
+                this.anchorForm.style.display = 'none';
+            }
             this.toolbarActions.style.display = 'block';
             this.keepToolbarAlive = false;
             clearTimeout(timer);
@@ -945,6 +1172,10 @@ else if (typeof define === 'function' && define.amd) {
         },
 
         showAnchorForm: function (link_value) {
+            if (!this.anchorForm) {
+                return;
+            }
+
             this.toolbarActions.style.display = 'none';
             this.saveSelection();
             this.anchorForm.style.display = 'block';
@@ -955,6 +1186,10 @@ else if (typeof define === 'function' && define.amd) {
         },
 
         bindAnchorForm: function () {
+            if (!this.anchorForm) {
+                return this;
+            }
+
             var linkCancel = this.anchorForm.querySelector('a.medium-editor-toobar-anchor-close'),
                 linkSave = this.anchorForm.querySelector('a.medium-editor-toobar-anchor-save'),
                 self = this;
@@ -1140,7 +1375,7 @@ else if (typeof define === 'function' && define.amd) {
         },
 
         anchorPreviewClickHandler: function (e) {
-            if (this.activeAnchor) {
+            if (!this.options.disableAnchorForm && this.activeAnchor) {
 
                 var self = this,
                     range = this.options.ownerDocument.createRange(),
@@ -1294,6 +1529,18 @@ else if (typeof define === 'function' && define.amd) {
                     }
                 }, 100);
             };
+
+            // Add a scroll event for sticky toolbar
+            if ( this.options.staticToolbar && this.options.stickyToolbar ) {
+
+                // On scroll, re-position the toolbar
+                this.on(window, 'scroll', function() {
+                    if (self.toolbar && self.toolbar.classList.contains('medium-editor-toolbar-active')) {
+                        self.setToolbarPosition();
+                    }
+                }, true);
+            }
+
             this.on(this.options.contentWindow, 'resize', this.windowResizeHandler);
             return this;
         },
@@ -1340,21 +1587,34 @@ else if (typeof define === 'function' && define.amd) {
             this.pasteWrapper = function (e) {
                 var paragraphs,
                     html = '',
-                    p;
+                    p,
+                    dataFormatHTML = 'text/html',
+                    dataFormatPlain = 'text/plain';
 
                 this.classList.remove('medium-editor-placeholder');
                 if (!self.options.forcePlainText && !self.options.cleanPastedHTML) {
                     return this;
                 }
 
+                if (window.clipboardData && e.clipboardData === undefined) {
+                    e.clipboardData = window.clipboardData;
+                    // If window.clipboardData exists, but e.clipboardData doesn't exist,
+                    // we're probably in IE. IE only has two possibilities for clipboard
+                    // data format: 'Text' and 'URL'.
+                    //
+                    // Of the two, we want 'Text':
+                    dataFormatHTML = 'Text';
+                    dataFormatPlain = 'Text';
+                }
+
                 if (e.clipboardData && e.clipboardData.getData && !e.defaultPrevented) {
                     e.preventDefault();
 
-                    if (self.options.cleanPastedHTML && e.clipboardData.getData('text/html')) {
-                        return self.cleanPaste(e.clipboardData.getData('text/html'));
+                    if (self.options.cleanPastedHTML && e.clipboardData.getData(dataFormatHTML)) {
+                        return self.cleanPaste(e.clipboardData.getData(dataFormatHTML));
                     }
                     if (!(self.options.disableReturn || this.getAttribute('data-disable-return'))) {
-                        paragraphs = e.clipboardData.getData('text/plain').split(/[\r\n]/g);
+                        paragraphs = e.clipboardData.getData(dataFormatPlain).split(/[\r\n]/g);
                         for (p = 0; p < paragraphs.length; p += 1) {
                             if (paragraphs[p] !== '') {
                                 if (navigator.userAgent.match(/firefox/i) && p === 0) {
@@ -1364,10 +1624,10 @@ else if (typeof define === 'function' && define.amd) {
                                 }
                             }
                         }
-                        self.options.ownerDocument.execCommand('insertHTML', false, html);
+                        insertHTMLCommand(self.options.ownerDocument, html);
                     } else {
-                        html = self.htmlEntities(e.clipboardData.getData('text/plain'));
-                        self.options.ownerDocument.execCommand('insertHTML', false, html);
+                        html = self.htmlEntities(e.clipboardData.getData(dataFormatPlain));
+                        insertHTMLCommand(self.options.ownerDocument, html);
                     }
                 }
             };
@@ -1378,6 +1638,10 @@ else if (typeof define === 'function' && define.amd) {
         },
 
         setPlaceholders: function () {
+            if (this.options.disablePlaceholders) {
+                return this;
+            }
+
             var i,
                 activatePlaceholder = function (el) {
                     if (!(el.querySelector('img')) &&
@@ -1515,7 +1779,7 @@ else if (typeof define === 'function' && define.amd) {
             return (el && (el.tagName.toLowerCase() === 'p' || el.tagName.toLowerCase() === 'div'));
         },
         filterCommonBlocks: function (el) {
-            if (/^\s*$/.test(el.innerText)) {
+            if (/^\s*$/.test(el.textContent)) {
                 el.parentNode.removeChild(el);
             }
         },
@@ -1585,7 +1849,7 @@ else if (typeof define === 'function' && define.amd) {
                 if (/^\s*$/.test()) {
                     el.parentNode.removeChild(el);
                 } else {
-                    el.parentNode.replaceChild(this.options.ownerDocument.createTextNode(el.innerText), el);
+                    el.parentNode.replaceChild(this.options.ownerDocument.createTextNode(el.textContent), el);
                 }
 
             }
