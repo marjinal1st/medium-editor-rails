@@ -1,6 +1,15 @@
 
 #### [Current]
+ * [6e3450b](../../commit/6e3450b) - __(Ahmet Sezgin Duran)__ Bump versions 1.1.0 and 2.1.0
+ * [c3d9387](../../commit/c3d9387) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+ * [ecf87f3](../../commit/ecf87f3) - __(Ahmet Sezgin Duran)__ Merge tag '1.0.0' into develop
+
+1.0.0
+
+#### 1.0.0
+ * [959341e](../../commit/959341e) - __(Ahmet Sezgin Duran)__ Dump changelog
  * [fb35ea2](../../commit/fb35ea2) - __(Ahmet Sezgin Duran)__ Bump versions 1.0.0 and 2.0.0
+ * [97d7aeb](../../commit/97d7aeb) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
  * [937e1f2](../../commit/937e1f2) - __(Ahmet Sezgin Duran)__ Merge tag '0.13.1' into develop
 
 0.13.1 0.13.1
