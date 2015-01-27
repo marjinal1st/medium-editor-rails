@@ -126,7 +126,8 @@
   -webkit-animation: pop-upwards 160ms forwards linear;
   -ms-animation: pop-upwards 160ms forwards linear;
   animation: pop-upwards 160ms forwards linear;
-  transition: top 0.075s ease-out, left 0.075s ease-out; }
+  -webkit-transition: top 0.075s ease-out, left 0.075s ease-out;
+          transition: top 0.075s ease-out, left 0.075s ease-out; }
 
 .medium-editor-action-bold {
   font-weight: bolder; }
@@ -167,4 +168,5 @@
     top: 0;
     left: 0;
     content: attr(data-placeholder) !important;
-    font-style: italic; }
+    font-style: italic;
+    white-space: pre; }
