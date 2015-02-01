@@ -180,6 +180,36 @@ else if (typeof define === 'function' && define.amd) {
         return html;
     }
 
+    /**
+     *  Find the caret position within an element irrespective of any inline tags it may contain.
+     *
+     *  @param {DOMElement} An element containing the cursor to find offsets relative to.
+     *  @param {Range} A Range representing cursor position. Will window.getSelection if none is passed.
+     *  @return {Object} 'left' and 'right' attributes contain offsets from begining and end of Element
+     */
+    function getCaretOffsets(element, range) {
+        var preCaretRange, postCaretRange;
+
+        if (!range) {
+            range = window.getSelection().getRangeAt(0);
+        }
+
+        preCaretRange = range.cloneRange();
+        postCaretRange = range.cloneRange();
+
+        preCaretRange.selectNodeContents(element);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+
+        postCaretRange.selectNodeContents(element);
+        postCaretRange.setStart(range.endContainer, range.endOffset);
+
+        return {
+            left: preCaretRange.toString().length,
+            right: postCaretRange.toString().length
+        };
+    }
+
+
     // https://github.com/jashkenas/underscore
     function isElement(obj) {
         return !!(obj && obj.nodeType === 1);
@@ -222,6 +252,7 @@ else if (typeof define === 'function' && define.amd) {
         defaults: {
             allowMultiParagraphSelection: true,
             anchorInputPlaceholder: 'Paste or type a link',
+            anchorInputCheckboxLabel: 'Open in new window',
             anchorPreviewHideDelay: 500,
             buttons: ['bold', 'italic', 'underline', 'anchor', 'header1', 'header2', 'quote'],
             buttonLabels: false,
@@ -289,8 +320,8 @@ else if (typeof define === 'function' && define.amd) {
                 .bindPaste()
                 .setPlaceholders()
                 .bindElementActions()
-                .bindWindowActions()
-                .passInstance();
+                .bindWindowActions();
+                //.passInstance();
         },
 
         on: function(target, event, listener, useCapture) {
@@ -380,7 +411,9 @@ else if (typeof define === 'function' && define.amd) {
             }
             // Init toolbar
             if (addToolbar) {
-                this.initToolbar()
+                this.passInstance()
+                    .callExtensions('init')
+                    .initToolbar()
                     .bindButtons()
                     .bindAnchorForm()
                     .bindAnchorPreview();
@@ -464,7 +497,7 @@ else if (typeof define === 'function' && define.amd) {
 
                 // Bind the return and tab keypress events
                 this.bindReturn(i)
-                    .bindTab(i)
+                    .bindKeydown(i)
                     .bindBlur(i)
                     .bindClick(i);
             }
@@ -526,6 +559,7 @@ else if (typeof define === 'function' && define.amd) {
                     }
                 }
             }
+            return this;
         },
 
         /**
@@ -581,7 +615,12 @@ else if (typeof define === 'function' && define.amd) {
                     if (!(self.options.disableReturn || editorElement.getAttribute('data-disable-return')) &&
                         tagName !== 'li' && !self.isListItemChild(node)) {
                         if (!e.shiftKey) {
-                            self.options.ownerDocument.execCommand('formatBlock', false, 'p');
+
+                            // paragraph creation should not be forced within a header tag
+                            if (!/h\d/.test(tagName))
+                            {
+                                self.options.ownerDocument.execCommand('formatBlock', false, 'p');
+                            }
                         }
                         if (tagName === 'a') {
                             self.options.ownerDocument.execCommand('unlink', false, null);
@@ -626,9 +665,10 @@ else if (typeof define === 'function' && define.amd) {
             return this;
         },
 
-        bindTab: function (index) {
+        bindKeydown: function (index) {
             var self = this;
             this.on(this.elements[index], 'keydown', function (e) {
+
                 if (e.which === 9) {
                     // Override tab only for pre nodes
                     var tag = getSelectionStart.call(self).tagName.toLowerCase();
@@ -649,8 +689,75 @@ else if (typeof define === 'function' && define.amd) {
                         }
                     }
                 }
+                else if ( e.which === 8 || e.which === 46 || e.which === 13 )
+                {
+
+                    // Bind keys which can create or destroy a block element: backspace, delete, return
+                    self.onBlockModifier(e);
+
+                }
             });
             return this;
+        },
+
+        onBlockModifier: function( e ) {
+
+            var range, sel, p, node = getSelectionStart.call(this),
+                tagName = node.tagName.toLowerCase(),
+                isEmpty = /^(\s+|<br\/?>)?$/i,
+                isHeader = /h\d/i;
+
+            if ( (e.which === 8 || e.which === 13) // backspace or return
+                    && node.previousElementSibling 
+                    && isHeader.test(tagName) // in a header
+                    && getCaretOffsets(node).left === 0 ) // at the very end of the block
+            {
+                if ( e.which === 8 && isEmpty.test(node.previousElementSibling.innerHTML) )
+                {
+                    // backspacing the begining of a header into an empty previous element will
+                    // change the tagName of the current node to prevent one
+                    // instead delete previous node and cancel the event.
+                    node.previousElementSibling.parentNode.removeChild( node.previousElementSibling );
+                    e.preventDefault();
+                }
+                else if ( e.which === 13 )
+                {
+                    // hitting return in the begining of a header will create empty header elements before the current one
+                    // instead, make "<p><br></p>" element, which are what happens if you hit return in an empty paragraph
+                    p = this.options.ownerDocument.createElement('p');
+                    p.innerHTML = '<br>';
+                    node.previousElementSibling.parentNode.insertBefore( p, node );
+                    e.preventDefault();
+                }
+
+            }
+            else if ( e.which === 46 // delete
+                && node.nextElementSibling
+                && node.previousElementSibling
+                && !isHeader.test(tagName) // not in a header
+                && isEmpty.test(node.innerHTML) // in an empty tag
+                && isHeader.test(node.nextElementSibling.tagName) ) // when the next tag *is* a header
+            {
+                    // hitting delete in an empty element preceding a header, ex:
+                    //  <p>[CURSOR]</p><h1>Header</h1>
+                    // Will cause the h1 to become a paragraph.
+                    // Instead, delete the paragraph node and move the cursor to the begining of the h1
+
+                    // remove node and move cursor to start of header
+                    range = document.createRange();
+                    sel = window.getSelection();
+
+                    range.setStart(node.nextElementSibling, 0);
+                    range.collapse(true);
+
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+
+                    node.previousElementSibling.parentNode.removeChild(node);
+
+                    e.preventDefault();
+            }
+
         },
 
         buttonTemplate: function (btnType) {
@@ -745,13 +852,14 @@ else if (typeof define === 'function' && define.amd) {
                 return this;
             }
             this.toolbar = this.createToolbar();
+            this.addExtensionForms();
             this.keepToolbarAlive = false;
             this.toolbarActions = this.toolbar.querySelector('.medium-editor-toolbar-actions');
             this.anchorPreview = this.createAnchorPreview();
 
             if (!this.options.disableAnchorForm) {
-                this.anchorForm = this.toolbar.querySelector('.medium-editor-toolbar-form-anchor');
-                this.anchorInput = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-input');
+                this.anchorForm = this.toolbar.querySelector('.medium-editor-toolbar-form');
+                this.anchorInput = this.anchorForm.querySelector('input.medium-editor-toolbar-input');
                 this.anchorTarget = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-target');
                 this.anchorButton = this.anchorForm.querySelector('input.medium-editor-toolbar-anchor-button');
             }
@@ -793,6 +901,9 @@ else if (typeof define === 'function' && define.amd) {
                 if (this.options.extensions.hasOwnProperty(btns[i])) {
                     ext = this.options.extensions[btns[i]];
                     btn = ext.getButton !== undefined ? ext.getButton(this) : null;
+                    if (ext.hasForm) {
+                        btn.setAttribute('data-form', 'medium-editor-toolbar-form-' + btns[i] + '-' + this.id);
+                    }
                 } else {
                     btn = this.buttonTemplate(btns[i]);
                 }
@@ -811,6 +922,30 @@ else if (typeof define === 'function' && define.amd) {
             return ul;
         },
 
+        addExtensionForms: function () {
+            var extensions = this.options.extensions,
+                ext,
+                name,
+                form,
+                id;
+
+            for (name in extensions) {
+                if (extensions.hasOwnProperty(name)) {
+                    ext = extensions[name];
+                    if(ext.hasForm){
+                       form = ext.getForm !== undefined ? ext.getForm() : null; 
+                    }
+                    if (form) {
+                        id = 'medium-editor-toolbar-form-'+name+'-'+this.id;
+                        form.className = 'medium-editor-toolbar-form';
+                        form.id = id;
+                        ext.getForm().id = id;
+                        this.toolbar.appendChild(form);
+                    }
+                }
+            }
+        },
+
         toolbarFormAnchor: function () {
             var anchor = this.options.ownerDocument.createElement('div'),
                 input = this.options.ownerDocument.createElement('input'),
@@ -822,21 +957,21 @@ else if (typeof define === 'function' && define.amd) {
                 save = this.options.ownerDocument.createElement('a');
 
             close.setAttribute('href', '#');
-            close.className = 'medium-editor-toobar-anchor-close';
+            close.className = 'medium-editor-toobar-close';
             close.innerHTML = '&times;';
 
             save.setAttribute('href', '#');
-            save.className = 'medium-editor-toobar-anchor-save';
+            save.className = 'medium-editor-toobar-save';
             save.innerHTML = '&#10003;';
 
             input.setAttribute('type', 'text');
-            input.className = 'medium-editor-toolbar-anchor-input';
+            input.className = 'medium-editor-toolbar-input';
             input.setAttribute('placeholder', this.options.anchorInputPlaceholder);
 
 
             target.setAttribute('type', 'checkbox');
             target.className = 'medium-editor-toolbar-anchor-target';
-            target_label.innerHTML = "Open in New Window?";
+            target_label.innerHTML = this.options.anchorInputCheckboxLabel;
             target_label.insertBefore(target, target_label.firstChild);
 
             button.setAttribute('type', 'checkbox');
@@ -845,7 +980,7 @@ else if (typeof define === 'function' && define.amd) {
             button_label.insertBefore(button, button_label.firstChild);
 
 
-            anchor.className = 'medium-editor-toolbar-form-anchor';
+            anchor.className = 'medium-editor-toolbar-form';
             anchor.id = 'medium-editor-toolbar-form-anchor-' + this.id;
             anchor.appendChild(input);
 
@@ -1054,7 +1189,8 @@ else if (typeof define === 'function' && define.amd) {
             boundary,
             middleBoundary,
             defaultLeft = (this.options.diffLeft) - (this.toolbar.offsetWidth / 2),
-            halfOffsetWidth = this.toolbar.offsetWidth / 2;
+            halfOffsetWidth = this.toolbar.offsetWidth / 2,
+            containerCenter = (containerRect.left + (containerRect.width / 2));
 
             if ( selection.focusNode === null ) {
                 return this;
@@ -1085,8 +1221,18 @@ else if (typeof define === 'function' && define.amd) {
                     this.toolbar.style.top = containerTop - this.toolbar.offsetHeight + "px";
                 }
 
-                this.toolbar.style.left = containerRect.left + "px";
-
+                if (this.options.toolbarAlign) {
+                    if (this.options.toolbarAlign === 'left') {
+                        this.toolbar.style.left = containerRect.left + "px";
+                    } else if (this.options.toolbarAlign === 'center') {
+                        this.toolbar.style.left = (containerCenter - halfOffsetWidth) + "px";
+                    } else {
+                        this.toolbar.style.left = (containerRect.right - this.toolbar.offsetWidth) + "px";
+                    }
+                } else {
+                    this.toolbar.style.left = (containerCenter - halfOffsetWidth) + "px";
+                }
+                
             } else if (!selection.isCollapsed) {
                 range = selection.getRangeAt(0);
                 boundary = range.getBoundingClientRect();
@@ -1165,6 +1311,11 @@ else if (typeof define === 'function' && define.amd) {
                     if (this.hasAttribute('data-action')) {
                         self.execAction(this.getAttribute('data-action'), e);
                     }
+                    // Allows extension buttons to show a form
+                    // TO DO: Improve this
+                    if (this.hasAttribute('data-form')) {
+                        self.showForm(this.getAttribute('data-form'), e);
+                    }
                 };
             for (i = 0; i < buttons.length; i += 1) {
                 this.on(buttons[i], 'click', triggerAction);
@@ -1196,6 +1347,27 @@ else if (typeof define === 'function' && define.amd) {
                 this.options.ownerDocument.execCommand(action, false, null);
                 this.setToolbarPosition();
             }
+        },
+
+        // Method to show an extension's form
+        // TO DO: Improve this
+        showForm: function (formId, e) {
+            this.toolbarActions.style.display = 'none';
+            this.saveSelection();
+            var form = document.getElementById(formId);
+            form.style.display = 'block';
+            this.setToolbarPosition();
+            this.keepToolbarAlive = true;
+        },
+
+        // Method to show an extension's form
+        // TO DO: Improve this
+        hideForm: function (form, e) {
+            var el = document.getElementById(form.id);
+            el.style.display = 'none';
+            this.showToolbarActions();
+            this.setToolbarPosition();
+            restoreSelection.call(this, this.savedSelection);
         },
 
         // http://stackoverflow.com/questions/15867542/range-object-get-selection-parent-node-chrome-vs-firefox
@@ -1355,8 +1527,8 @@ else if (typeof define === 'function' && define.amd) {
                 return this;
             }
 
-            var linkCancel = this.anchorForm.querySelector('a.medium-editor-toobar-anchor-close'),
-                linkSave = this.anchorForm.querySelector('a.medium-editor-toobar-anchor-save'),
+            var linkCancel = this.anchorForm.querySelector('a.medium-editor-toobar-close'),
+                linkSave = this.anchorForm.querySelector('a.medium-editor-toobar-save'),
                 self = this;
 
             this.on(this.anchorForm, 'click', function (e) {
@@ -1435,7 +1607,6 @@ else if (typeof define === 'function' && define.amd) {
             });
             return this;
         },
-
 
         hideAnchorPreview: function () {
             this.anchorPreview.classList.remove('medium-editor-anchor-preview-active');
