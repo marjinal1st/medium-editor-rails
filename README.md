@@ -8,7 +8,7 @@ This gem integrates [Medium Editor](https://github.com/daviferreira/medium-edito
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [2.1.3](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [2.2.0](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 
