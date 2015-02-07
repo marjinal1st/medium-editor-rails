@@ -32,6 +32,13 @@ if (typeof module === 'object') {
     // https://github.com/jashkenas/underscore
     var now = Date.now || function () {
         return new Date().getTime();
+    }, keyCode = {
+        BACKSPACE: 8,
+        TAB: 9,
+        ENTER: 13,
+        ESCAPE: 27,
+        SPACE: 32,
+        DELETE: 46
     };
 
     // https://github.com/jashkenas/underscore
@@ -98,7 +105,7 @@ if (typeof module === 'object') {
     function findAdjacentTextNodeWithContent(rootNode, targetNode, ownerDocument) {
         var pastTarget = false,
             nextNode,
-            nodeIterator = ownerDocument.createNodeIterator(rootNode, NodeFilter.SHOW_TEXT);
+            nodeIterator = ownerDocument.createNodeIterator(rootNode, NodeFilter.SHOW_TEXT, null, false);
 
         // Use a native NodeIterator to iterate over all the text nodes that are descendants
         // of the rootNode.  Once past the targetNode, choose the first non-empty text node
@@ -107,7 +114,7 @@ if (typeof module === 'object') {
             if (nextNode === targetNode) {
                 pastTarget = true;
             } else if (pastTarget) {
-                if (nextNode.nodeType === 3 && nextNode.nodeValue && nextNode.nodeValue.length > 0) {
+                if (nextNode.nodeType === 3 && nextNode.nodeValue && nextNode.nodeValue.trim().length > 0) {
                     break;
                 }
             }
@@ -219,7 +226,9 @@ if (typeof module === 'object') {
         var selection, range, el, fragment, node, lastNode;
 
         if (doc.queryCommandSupported('insertHTML')) {
-            return doc.execCommand('insertHTML', false, html);
+            try {
+                return doc.execCommand('insertHTML', false, html);
+            } catch (ignore) {}
         }
 
         selection = window.getSelection();
@@ -267,6 +276,7 @@ if (typeof module === 'object') {
             disableAnchorForm: false,
             disablePlaceholders: false,
             elementsContainer: false,
+            imageDragging: true,
             standardizeSelectionStart: false,
             contentWindow: window,
             ownerDocument: document,
@@ -316,6 +326,7 @@ if (typeof module === 'object') {
             this.initThrottledMethods()
                 .initElements()
                 .bindSelect()
+                .bindDragDrop()
                 .bindPaste()
                 .setPlaceholders()
                 .bindElementActions()
@@ -597,7 +608,7 @@ if (typeof module === 'object') {
             this.on(this.elements[index], 'keypress', function (e) {
                 var node,
                     tagName;
-                if (e.which === 32) {
+                if (e.which === keyCode.SPACE) {
                     node = getSelectionStart.call(self);
                     tagName = node.tagName.toLowerCase();
                     if (tagName === 'a') {
@@ -614,7 +625,7 @@ if (typeof module === 'object') {
                 if (node && node.getAttribute('data-medium-element') && node.children.length === 0 && !(self.options.disableReturn || node.getAttribute('data-disable-return'))) {
                     self.options.ownerDocument.execCommand('formatBlock', false, 'p');
                 }
-                if (e.which === 13) {
+                if (e.which === keyCode.ENTER) {
                     node = getSelectionStart.call(self);
                     tagName = node.tagName.toLowerCase();
                     editorElement = self.getSelectionElement();
@@ -657,7 +668,7 @@ if (typeof module === 'object') {
         bindReturn: function (index) {
             var self = this;
             this.on(this.elements[index], 'keypress', function (e) {
-                if (e.which === 13) {
+                if (e.which === keyCode.ENTER) {
                     if (self.options.disableReturn || this.getAttribute('data-disable-return')) {
                         e.preventDefault();
                     } else if (self.options.disableDoubleReturn || this.getAttribute('data-disable-double-return')) {
@@ -675,7 +686,7 @@ if (typeof module === 'object') {
             var self = this;
             this.on(this.elements[index], 'keydown', function (e) {
 
-                if (e.which === 9) {
+                if (e.which === keyCode.TAB) {
                     // Override tab only for pre nodes
                     var tag = getSelectionStart.call(self).tagName.toLowerCase();
                     if (tag === 'pre') {
@@ -694,7 +705,7 @@ if (typeof module === 'object') {
                             self.options.ownerDocument.execCommand('indent', e);
                         }
                     }
-                } else if (e.which === 8 || e.which === 46 || e.which === 13) {
+                } else if (e.which === keyCode.BACKSPACE || e.which === keyCode.DELETE || e.which === keyCode.ENTER) {
 
                     // Bind keys which can create or destroy a block element: backspace, delete, return
                     self.onBlockModifier(e);
@@ -705,26 +716,24 @@ if (typeof module === 'object') {
         },
 
         onBlockModifier: function (e) {
-
             var range, sel, p, node = getSelectionStart.call(this),
                 tagName = node.tagName.toLowerCase(),
                 isEmpty = /^(\s+|<br\/?>)?$/i,
                 isHeader = /h\d/i;
 
-            // backspace or return
-            if ((e.which === 8 || e.which === 13)
+            if ((e.which === keyCode.BACKSPACE || e.which === keyCode.ENTER)
                     && node.previousElementSibling
                     // in a header
                     && isHeader.test(tagName)
                     // at the very end of the block
                     && getCaretOffsets(node).left === 0) {
-                if (e.which === 8 && isEmpty.test(node.previousElementSibling.innerHTML)) {
+                if (e.which === keyCode.BACKSPACE && isEmpty.test(node.previousElementSibling.innerHTML)) {
                     // backspacing the begining of a header into an empty previous element will
                     // change the tagName of the current node to prevent one
                     // instead delete previous node and cancel the event.
                     node.previousElementSibling.parentNode.removeChild(node.previousElementSibling);
                     e.preventDefault();
-                } else if (e.which === 13) {
+                } else if (e.which === keyCode.ENTER) {
                     // hitting return in the begining of a header will create empty header elements before the current one
                     // instead, make "<p><br></p>" element, which are what happens if you hit return in an empty paragraph
                     p = this.options.ownerDocument.createElement('p');
@@ -732,9 +741,7 @@ if (typeof module === 'object') {
                     node.previousElementSibling.parentNode.insertBefore(p, node);
                     e.preventDefault();
                 }
-
-            // delete
-            } else if (e.which === 46
+            } else if (e.which === keyCode.DELETE
                         && node.nextElementSibling
                         && node.previousElementSibling
                         // not in a header
@@ -762,7 +769,6 @@ if (typeof module === 'object') {
 
                 e.preventDefault();
             }
-
         },
 
         buttonTemplate: function (btnType) {
@@ -1026,6 +1032,65 @@ if (typeof module === 'object') {
             return this;
         },
 
+
+        bindDragDrop: function () {
+            var self = this, i, className, onDrag, onDrop, element;
+
+            if (!self.options.imageDragging) {
+                return;
+            }
+
+            className = 'medium-editor-dragover';
+
+            onDrag = function (e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+
+                if (e.type === "dragover") {
+                    this.classList.add(className);
+                } else {
+                    this.classList.remove(className);
+                }
+            };
+
+            onDrop = function (e) {
+                var files;
+                e.preventDefault();
+                e.stopPropagation();
+                files = Array.prototype.slice.call(e.dataTransfer.files, 0);
+                files.some(function (file) {
+                    if (file.type.match("image")) {
+                        var fileReader, id;
+                        fileReader = new FileReader();
+                        fileReader.readAsDataURL(file);
+
+                        id = 'medium-img-' + (+new Date());
+                        insertHTMLCommand(self.options.ownerDocument, '<img class="medium-image-loading" id="' + id + '" />');
+
+                        fileReader.onload = function () {
+                            var img = document.getElementById(id);
+                            if (img) {
+                                img.removeAttribute('id');
+                                img.removeAttribute('class');
+                                img.src = fileReader.result;
+                            }
+                        };
+                    }
+                });
+                this.classList.remove(className);
+            };
+
+            for (i = 0; i < this.elements.length; i += 1) {
+                element = this.elements[i];
+
+
+                this.on(element, 'dragover', onDrag);
+                this.on(element, 'dragleave', onDrag);
+                this.on(element, 'drop', onDrop);
+            }
+            return this;
+        },
+
         stopSelectionUpdates: function () {
             this.preventSelectionUpdates = true;
         },
@@ -1141,15 +1206,7 @@ if (typeof module === 'object') {
             }
         },
 
-        findMatchingSelectionParent: function (testElementFunction) {
-            var selection = this.options.contentWindow.getSelection(), range, current;
-
-            if (selection.rangeCount === 0) {
-                return false;
-            }
-
-            range = selection.getRangeAt(0);
-            current = range.commonAncestorContainer;
+        traverseUp: function (current, testElementFunction) {
 
             do {
                 if (current.nodeType === 1) {
@@ -1166,6 +1223,21 @@ if (typeof module === 'object') {
             } while (current);
 
             return false;
+
+        },
+
+        findMatchingSelectionParent: function (testElementFunction) {
+            var selection = this.options.contentWindow.getSelection(), range, current;
+
+            if (selection.rangeCount === 0) {
+                return false;
+            }
+
+            range = selection.getRangeAt(0);
+            current = range.commonAncestorContainer;
+
+            return this.traverseUp(current, testElementFunction);
+
         },
 
         getSelectionElement: function () {
@@ -1383,7 +1455,7 @@ if (typeof module === 'object') {
         getSelectedParentElement: function () {
             var selectedParentElement = null,
                 range = this.selectionRange;
-            if (this.rangeSelectsSingleNode(range)) {
+            if (this.rangeSelectsSingleNode(range) && range.startContainer.childNodes[range.startOffset].nodeType !== 3) {
                 selectedParentElement = range.startContainer.childNodes[range.startOffset];
             } else if (range.startContainer.nodeType === 3) {
                 selectedParentElement = range.startContainer.parentNode;
@@ -1542,7 +1614,7 @@ if (typeof module === 'object') {
                 var button = null,
                     target;
 
-                if (e.keyCode === 13) {
+                if (e.keyCode === keyCode.ENTER) {
                     e.preventDefault();
                     if (self.options.anchorTarget && self.anchorTarget.checked) {
                         target = "_blank";
@@ -1555,7 +1627,7 @@ if (typeof module === 'object') {
                     }
 
                     self.createLink(this, target, button);
-                } else if (e.keyCode === 27) {
+                } else if (e.keyCode === keyCode.ESCAPE) {
                     e.preventDefault();
                     self.showToolbarActions();
                     restoreSelection.call(self, self.savedSelection);
@@ -1625,7 +1697,7 @@ if (typeof module === 'object') {
                 halfOffsetWidth,
                 defaultLeft;
 
-            self.anchorPreview.querySelector('i').textContent = anchorEl.href;
+            self.anchorPreview.querySelector('i').textContent = anchorEl.attributes.href.value;
             halfOffsetWidth = self.anchorPreview.offsetWidth / 2;
             defaultLeft = self.options.diffLeft - halfOffsetWidth;
 
@@ -1724,7 +1796,7 @@ if (typeof module === 'object') {
                 // We may actually be displaying the anchor preview, which should be controlled by options.delay
                 this.delay(function () {
                     if (self.activeAnchor) {
-                        self.showAnchorForm(self.activeAnchor.href);
+                        self.showAnchorForm(self.activeAnchor.attributes.href.value);
                     }
                     self.keepToolbarAlive = false;
                 });
@@ -1822,26 +1894,7 @@ if (typeof module === 'object') {
         createLink: function (input, target, buttonClass) {
             var i, event;
 
-            if (input.value.trim().length === 0) {
-                this.hideToolbarActions();
-                return;
-            }
-
-            restoreSelection.call(this, this.savedSelection);
-
-            if (this.options.checkLinkFormat) {
-                input.value = this.checkLinkFormat(input.value);
-            }
-
-            this.options.ownerDocument.execCommand('createLink', false, input.value);
-
-            if (this.options.targetBlank || target === "_blank") {
-                this.setTargetBlank();
-            }
-
-            if (buttonClass) {
-                this.setButtonClass(buttonClass);
-            }
+            this.createLinkInternal(input.value, target, buttonClass);
 
             if (this.options.targetBlank || target === "_blank" || buttonClass) {
                 event = this.options.ownerDocument.createEvent("HTMLEvents");
@@ -1854,6 +1907,29 @@ if (typeof module === 'object') {
             this.checkSelection();
             this.showToolbarActions();
             input.value = '';
+        },
+
+        createLinkInternal: function (url, target, buttonClass) {
+            if (!url || url.trim().length === 0) {
+                this.hideToolbarActions();
+                return;
+            }
+
+            restoreSelection.call(this, this.savedSelection);
+
+            if (this.options.checkLinkFormat) {
+                url = this.checkLinkFormat(url);
+            }
+
+            this.options.ownerDocument.execCommand('createLink', false, url);
+
+            if (this.options.targetBlank || target === "_blank") {
+                this.setTargetBlank();
+            }
+
+            if (buttonClass) {
+                this.setButtonClass(buttonClass);
+            }
         },
 
         positionToolbarIfShown: function () {
@@ -1951,11 +2027,7 @@ if (typeof module === 'object') {
                         paragraphs = e.clipboardData.getData(dataFormatPlain).split(/[\r\n]/g);
                         for (p = 0; p < paragraphs.length; p += 1) {
                             if (paragraphs[p] !== '') {
-                                if (navigator.userAgent.match(/firefox/i) && p === 0) {
-                                    html += self.htmlEntities(paragraphs[p]);
-                                } else {
-                                    html += '<p>' + self.htmlEntities(paragraphs[p]) + '</p>';
-                                }
+                                html += '<p>' + self.htmlEntities(paragraphs[p]) + '</p>';
                             }
                         }
                         insertHTMLCommand(self.options.ownerDocument, html);
@@ -2092,7 +2164,7 @@ if (typeof module === 'object') {
                 }
 
             }
-            this.options.ownerDocument.execCommand('insertHTML', false, fragmentBody.innerHTML.replace(/&nbsp;/g, ' '));
+            insertHTMLCommand(this.options.ownerDocument, fragmentBody.innerHTML.replace(/&nbsp;/g, ' '));
         },
         isCommonBlock: function (el) {
             return (el && (el.tagName.toLowerCase() === 'p' || el.tagName.toLowerCase() === 'div'));
@@ -2138,7 +2210,10 @@ if (typeof module === 'object') {
             var i,
                 el,
                 new_el,
-                spans = container_el.querySelectorAll('.replace-with');
+                spans = container_el.querySelectorAll('.replace-with'),
+                isCEF = function (el) {
+                    return (el && el.nodeName !== '#text' && el.getAttribute('contenteditable') === 'false');
+                };
 
             for (i = 0; i < spans.length; i += 1) {
 
@@ -2163,6 +2238,11 @@ if (typeof module === 'object') {
             for (i = 0; i < spans.length; i += 1) {
 
                 el = spans[i];
+
+                // bail if span is in contenteditable = false
+                if (this.traverseUp(el, isCEF)) {
+                    return false;
+                }
 
                 // remove empty spans, replace others with their contents
                 if (/^\s*$/.test()) {
