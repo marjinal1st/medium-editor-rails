@@ -1,6 +1,6 @@
 module MediumEditorRails
   module Rails
-    VERSION = '1.3.0'
-    MEDIUM_EDITOR_VERSION = '2.3.0'
+    VERSION = '1.4.2'
+    MEDIUM_EDITOR_VERSION = '2.4.2'
   end
 end
