@@ -1,5 +1,12 @@
 
 #### [Current]
+ * [c57cd48](../../commit/c57cd48) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+ * [0b99797](../../commit/0b99797) - __(Ahmet Sezgin Duran)__ Merge tag '1.4.2' into develop
+
+1.4.2
+
+#### 1.4.2
+ * [edda875](../../commit/edda875) - __(Ahmet Sezgin Duran)__ Bump versions 1.4.2 and 2.4.2
  * [cad5c5c](../../commit/cad5c5c) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
  * [2666922](../../commit/2666922) - __(Ahmet Sezgin Duran)__ Merge tag '1.3.0' into develop
 
