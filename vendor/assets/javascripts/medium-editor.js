@@ -77,6 +77,9 @@ var mediumEditorUtil;
         },
 
         isDescendant: function isDescendant(parent, child) {
+            if (!parent || !child) {
+                return false;
+            }
             var node = child.parentNode;
             while (node !== null) {
                 if (node === parent) {
@@ -386,7 +389,8 @@ var DefaultButton,
             },
             useQueryState: true,
             contentDefault: '<b>B</b>',
-            contentFA: '<i class="fa fa-bold"></i>'
+            contentFA: '<i class="fa fa-bold"></i>',
+            key: 'b'
         },
         'italic': {
             name: 'italic',
@@ -399,7 +403,8 @@ var DefaultButton,
             },
             useQueryState: true,
             contentDefault: '<b><i>I</i></b>',
-            contentFA: '<i class="fa fa-italic"></i>'
+            contentFA: '<i class="fa fa-italic"></i>',
+            key: 'i'
         },
         'underline': {
             name: 'underline',
@@ -412,7 +417,8 @@ var DefaultButton,
             },
             useQueryState: true,
             contentDefault: '<b><u>U</u></b>',
-            contentFA: '<i class="fa fa-underline"></i>'
+            contentFA: '<i class="fa fa-underline"></i>',
+            key: 'u'
         },
         'strikethrough': {
             name: 'strikethrough',
@@ -707,6 +713,7 @@ var DefaultButton,
         }
     };
 }(window, document));
+
 var pasteHandler;
 
 (function (window, document) {
@@ -1340,9 +1347,18 @@ function MediumEditor(elements, options) {
             var self = this,
                 blurFunction = function (e) {
                     var isDescendantOfEditorElements = false,
+                        selection = self.options.contentWindow.getSelection(),
+                        selRange = selection.isCollapsed ?
+                                   null :
+                                   meSelection.getSelectedParentElement(selection.getRangeAt(0)),
                         i;
+
+                    // This control was introduced also to avoid the toolbar
+                    // to disapper when selecting from right to left and
+                    // the selection ends at the beginning of the text.
                     for (i = 0; i < self.elements.length; i += 1) {
-                        if (mediumEditorUtil.isDescendant(self.elements[i], e.target)) {
+                        if (mediumEditorUtil.isDescendant(self.elements[i], e.target)
+                                || mediumEditorUtil.isDescendant(self.elements[i], selRange)) {
                             isDescendantOfEditorElements = true;
                             break;
                         }
@@ -1572,11 +1588,12 @@ function MediumEditor(elements, options) {
         bindKeydown: function (index) {
             var self = this;
             this.on(this.elements[index], 'keydown', function (e) {
+                var node, tag, key;
 
                 if (e.which === mediumEditorUtil.keyCode.TAB) {
                     // Override tab only for pre nodes
-                    var node = meSelection.getSelectionStart(self.options.ownerDocument),
-                        tag = node && node.tagName.toLowerCase();
+                    node = meSelection.getSelectionStart(self.options.ownerDocument);
+                    tag = node && node.tagName.toLowerCase();
 
                     if (tag === 'pre') {
                         e.preventDefault();
@@ -1599,6 +1616,13 @@ function MediumEditor(elements, options) {
                     // Bind keys which can create or destroy a block element: backspace, delete, return
                     self.onBlockModifier(e);
 
+                } else if (e.ctrlKey) {
+                    key = String.fromCharCode(e.which || e.keyCode).toLowerCase();
+                    self.commands.forEach(function (extension) {
+                        if (extension.options.key && extension.options.key === key) {
+                            extension.handleClick(e);
+                        }
+                    });
                 }
             });
             return this;
