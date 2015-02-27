@@ -176,7 +176,9 @@ if (!("classList" in document.createElement("_"))) {
     if (typeof module === 'object') {
         module.exports = factory;
     } else if (typeof define === 'function' && define.amd) {
-        define(factory);
+        define(function () {
+            return factory;
+        });
     } else {
         root.MediumEditor = factory;
     }
@@ -848,11 +850,7 @@ var DefaultButton,
         queryCommandState: function () {
             var queryState = null;
             if (this.options.useQueryState) {
-                try {
-                    queryState = this.base.options.ownerDocument.queryCommandState(this.getAction());
-                } catch (exc) {
-                    queryState = null;
-                }
+                queryState = this.base.queryCommandState(this.getAction());
             }
             return queryState;
         },
@@ -2377,6 +2375,28 @@ function MediumEditor(elements, options) {
             return this;
         },
 
+        // Wrapper around document.queryCommandState for checking whether an action has already
+        // been applied to the current selection
+        queryCommandState: function (action) {
+            var fullAction = /^full-(.+)$/gi,
+                match,
+                queryState = null;
+
+            // Actions starting with 'full-' need to be modified since this is a medium-editor concept
+            match = fullAction.exec(action);
+            if (match) {
+                action = match[1];
+            }
+
+            try {
+                queryState = this.options.ownerDocument.queryCommandState(action);
+            } catch (exc) {
+                queryState = null;
+            }
+
+            return queryState;
+        },
+
         execAction: function (action, opts) {
             /*jslint regexp: true*/
             var fullAction = /^full-(.+)$/gi,
@@ -2427,26 +2447,8 @@ function MediumEditor(elements, options) {
             return this.options.ownerDocument.execCommand(action, false, null);
         },
 
-        // TODO: move these two methods to selection.js
-        // http://stackoverflow.com/questions/15867542/range-object-get-selection-parent-node-chrome-vs-firefox
-        rangeSelectsSingleNode: function (range) {
-            var startNode = range.startContainer;
-            return startNode === range.endContainer &&
-                startNode.hasChildNodes() &&
-                range.endOffset === range.startOffset + 1;
-        },
-
         getSelectedParentElement: function () {
-            var selectedParentElement = null,
-                range = this.selectionRange;
-            if (this.rangeSelectsSingleNode(range) && range.startContainer.childNodes[range.startOffset].nodeType !== 3) {
-                selectedParentElement = range.startContainer.childNodes[range.startOffset];
-            } else if (range.startContainer.nodeType === 3) {
-                selectedParentElement = range.startContainer.parentNode;
-            } else {
-                selectedParentElement = range.startContainer;
-            }
-            return selectedParentElement;
+            return Selection.getSelectedParentElement();
         },
 
         execFormatBlock: function (el) {
