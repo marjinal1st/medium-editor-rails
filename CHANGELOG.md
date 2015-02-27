@@ -1,5 +1,12 @@
 
 #### [Current]
+ * [8efdb52](../../commit/8efdb52) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
+ * [b838798](../../commit/b838798) - __(Ahmet Sezgin Duran)__ Merge tag '2.0.0' into develop
+
+2.0.0
+
+#### 2.0.0
+ * [418af6d](../../commit/418af6d) - __(Ahmet Sezgin Duran)__ Bump versions 2.0.0 and 3.0.0
  * [c615afc](../../commit/c615afc) - __(Ahmet Sezgin Duran)__ Update Medium Editor files
  * [ba615ed](../../commit/ba615ed) - __(Ahmet Sezgin Duran)__ Merge tag '1.4.5' into develop
 
