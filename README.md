@@ -4,6 +4,8 @@
 [![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
 [![Dependency Status](https://gemnasium.com/marjinal1st/medium-editor-rails.svg)](https://gemnasium.com/marjinal1st/medium-editor-rails)
 
+## This gem is no longer maintained. If you would like to maintain, please contact me on email.
+
 This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
 
 ## Version
