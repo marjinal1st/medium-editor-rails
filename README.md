@@ -1,16 +1,12 @@
 # Medium Editor for Rails
 
-[![Gem Version](https://badge.fury.io/rb/medium-editor-rails.png)](http://badge.fury.io/rb/medium-editor-rails)
-[![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
-[![Dependency Status](https://gemnasium.com/marjinal1st/medium-editor-rails.svg)](https://gemnasium.com/marjinal1st/medium-editor-rails)
+This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails assets pipeline.
 
-## This gem is no longer maintained. If you would like to maintain, please contact me on email.
-
-This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
+This gem was developed by [Marjinal1st](https://github.com/marjinal1st).
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [4.2.0](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [5.14.4](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 
@@ -46,6 +42,8 @@ You can also include themes from **themes** folder, example:
 *= require medium-editor/themes/flat
 ```
 
+For more themes, visit: [Medium Editor Themes](https://github.com/yabwe/medium-editor/wiki/Themes)
+
 ## Using Medium Editor with Rails
 
 You need to initialize Medium Editor with any selector of div, example:
@@ -53,16 +51,18 @@ You need to initialize Medium Editor with any selector of div, example:
 ```html
 <div class="editable"></div>
 
-<script>var editor = new MediumEditor('.editable');</script>
+<script>
+  var editor = new MediumEditor('.editor', {
+    // options go here
+  });
+</script>
 ```
 
-For extra options, visit this page:
-
-https://github.com/daviferreira/medium-editor#initialization-options
+For extra options, visit: [Medium Editor Options](https://github.com/yabwe/medium-editor#mediumeditor-options)
 
 ## Contributing
 
-1. Fork it ( http://github.com/marjinal1st/medium-editor-rails/fork )
+1. Fork it
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
