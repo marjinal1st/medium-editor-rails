@@ -4,13 +4,11 @@
 [![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
 [![Dependency Status](https://gemnasium.com/marjinal1st/medium-editor-rails.svg)](https://gemnasium.com/marjinal1st/medium-editor-rails)
 
-## This gem is no longer maintained. If you would like to maintain, please contact me on email.
-
 This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [4.2.0](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [5.14.4](https://github.com/daviferreira/medium-editor/releases)
 
 ## Installation
 
@@ -23,7 +21,7 @@ gem 'medium-editor-rails'
 And then execute:
 
 ```bash
-$ bundle install
+bundle install
 ```
 
 ## Configuration
@@ -34,7 +32,7 @@ Include javascript file in **app/assets/javascripts/application.js**:
 //= require medium-editor
 ```
 
-Include stylesheet file on **app/assets/stylesheets/application.css**:
+Include stylesheet file in **app/assets/stylesheets/application.css**:
 
 ```scss
 *= require medium-editor/medium-editor
@@ -46,6 +44,8 @@ You can also include themes from **themes** folder, example:
 *= require medium-editor/themes/flat
 ```
 
+For more themes, visit: [Medium Editor Themes](https://github.com/yabwe/medium-editor/wiki/Themes)
+
 ## Using Medium Editor with Rails
 
 You need to initialize Medium Editor with any selector of div, example:
@@ -53,12 +53,14 @@ You need to initialize Medium Editor with any selector of div, example:
 ```html
 <div class="editable"></div>
 
-<script>var editor = new MediumEditor('.editable');</script>
+<script>
+  var editor = new MediumEditor('.editor', {
+    // options go here
+  });
+</script>
 ```
 
-For extra options, visit this page:
-
-https://github.com/daviferreira/medium-editor#initialization-options
+For extra options, visit: [Medium Editor Options](https://github.com/yabwe/medium-editor#mediumeditor-options)
 
 ## Contributing
 
