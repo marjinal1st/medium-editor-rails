@@ -6,9 +6,9 @@ require 'medium-editor-rails/version'
 Gem::Specification.new do |gem|
   gem.name          = 'medium-editor-rails'
   gem.version       = MediumEditorRails::Rails::VERSION
-  gem.authors       = ['Ahmet Sezgin Duran']
-  gem.email         = ['marjinalist1@gmail.com']
-  gem.summary       = %q{Medium Editor integrated in Rails asset pipeline}
+  gem.authors       = ['Ahmet Sezgin Duran', 'Gabriel Medina']
+  gem.email         = ['marjinalist1@gmail.com', 'gmedina.santos@gmail.com']
+  gem.summary       = %q{Metdium Editor integrated in Rails asset pipeline}
   gem.description   = gem.summary
   gem.homepage      = 'https://github.com/marjinal1st/medium-editor-rails'
   gem.license       = 'MIT'
