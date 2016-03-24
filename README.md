@@ -4,11 +4,11 @@
 [![Code Climate](https://codeclimate.com/github/marjinal1st/medium-editor-rails.png)](https://codeclimate.com/github/marjinal1st/medium-editor-rails)
 [![Dependency Status](https://gemnasium.com/marjinal1st/medium-editor-rails.svg)](https://gemnasium.com/marjinal1st/medium-editor-rails)
 
-This gem integrates [Medium Editor](https://github.com/daviferreira/medium-editor) with Rails asset pipeline.
+This gem integrates [Medium Editor](https://github.com/yabwe/medium-editor) with Rails asset pipeline.
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [5.14.4](https://github.com/daviferreira/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [5.14.4](https://github.com/yabwe/medium-editor/releases)
 
 ## Installation
 
