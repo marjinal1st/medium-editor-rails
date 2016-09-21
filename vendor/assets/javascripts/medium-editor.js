@@ -780,7 +780,7 @@ MediumEditor.extensions = {};
                 timeout = null,
                 previous = 0,
                 later = function () {
-                    previous = Date.now();
+                    previous = new Date().getTime();
                     timeout = null;
                     result = func.apply(context, args);
                     if (!timeout) {
@@ -793,7 +793,7 @@ MediumEditor.extensions = {};
             }
 
             return function () {
-                var now = Date.now(),
+                var now = new Date().getTime(),
                     remaining = wait - (now - previous);
 
                 context = this;
@@ -6839,7 +6839,7 @@ MediumEditor.extensions = {};
 
     function createContentEditable(textarea) {
         var div = this.options.ownerDocument.createElement('div'),
-            now = Date.now(),
+            now = new Date().getTime(),
             uniqueId = 'medium-editor-' + now,
             atts = textarea.attributes;
 
