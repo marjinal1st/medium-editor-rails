@@ -54,7 +54,7 @@ You need to initialize Medium Editor with any selector of div, example:
 <div class="editable"></div>
 
 <script>
-  var editor = new MediumEditor('.editor', {
+  var editor = new MediumEditor('.editable', {
     // options go here
   });
 </script>
