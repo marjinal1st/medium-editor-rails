@@ -5,6 +5,7 @@ README_VERSION_REGEXP = /bundled by this gem is \[([^\]]*)\]/
 VERSION_FILE_REGEXP = /MEDIUM_EDITOR_VERSION\s.*/
 
 namespace :bower do
+  desc "updates JS version references in README and VERSION files"
   task :bump do
     bump_readme_file
     bump_version_file
