@@ -8,7 +8,7 @@ This gem integrates [Medium Editor](https://github.com/yabwe/medium-editor) with
 
 ## Version
 
-The latest version of Medium Editor bundled by this gem is [5.22.2](https://github.com/yabwe/medium-editor/releases)
+The latest version of Medium Editor bundled by this gem is [5.23.2](https://github.com/yabwe/medium-editor/releases)
 
 ## Installation
 
